@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1412">
+<title>Keep Vendas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23139A5B'/%3E%3Cpath d='M9 8h4v7l6-7h5l-7 8 7 9h-5l-6-7v7H9z' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#F4F6F4; --surface:#FFFFFF; --surface2:#EDF1EE; --ink:#15201B; --muted:#5F6B65; --line:#D9E0DB;
+  --accent:#139A5B; --accent-ink:#0B6B3E; --accent-soft:#DDF3E7;
+  --warn:#B45309; --warn-soft:#FEF3C7; --danger:#B91C1C; --danger-soft:#FEE2E2; --info:#1D4ED8; --info-soft:#DBEAFE;
+  --shadow:0 10px 30px rgba(21,32,27,.12);
+  --r:12px; --font-d:'Poppins',system-ui,sans-serif; --font-b:'IBM Plex Sans',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1412; --surface:#182019; --surface2:#1F2A22; --ink:#E6ECE8; --muted:#93A09A; --line:#2A362E;
+    --accent:#2ECC80; --accent-ink:#8FE6B9; --accent-soft:#1A3A2A;
+    --warn:#F59E0B; --warn-soft:#3B2A0A; --danger:#F87171; --danger-soft:#3B1515; --info:#60A5FA; --info-soft:#14284A;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1412; --surface:#182019; --surface2:#1F2A22; --ink:#E6ECE8; --muted:#93A09A; --line:#2A362E;
+  --accent:#2ECC80; --accent-ink:#8FE6B9; --accent-soft:#1A3A2A;
+  --warn:#F59E0B; --warn-soft:#3B2A0A; --danger:#F87171; --danger-soft:#3B1515; --info:#60A5FA; --info-soft:#14284A;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--font-b);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--font-d);margin:0;text-wrap:balance;line-height:1.25}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.ghost{background:transparent}
+button.danger{color:var(--danger);border-color:var(--danger)}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+textarea{min-height:80px;resize:vertical}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;letter-spacing:.02em}
+.field{margin-bottom:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row > *{flex:1 1 140px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.hidden{display:none !important}
+a{color:var(--accent-ink)}
+
+/* ---- login ---- */
+#login{min-height:100%;display:grid;place-items:center;padding:24px}
+.login-card{width:min(380px,100%);background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px;box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-d);font-weight:700;font-size:18px}
+.brand .mark{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff;font-size:15px}
+.msg-err{background:var(--danger-soft);color:var(--danger);padding:8px 10px;border-radius:8px;font-size:13px;margin-top:10px}
+
+/* ---- app shell ---- */
+#app{display:flex;flex-direction:column;min-height:100%}
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:14px}
+.topbar nav{display:flex;gap:4px;margin-left:8px;overflow-x:auto}
+.topbar nav button{border:0;background:transparent;padding:8px 12px;border-radius:999px;font-weight:500;color:var(--muted);white-space:nowrap}
+.topbar nav button.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.topbar .spacer{flex:1}
+.topbar .badge-nav{display:inline-block;min-width:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:600;margin-left:4px;text-align:center}
+main{flex:1;padding:16px;max-width:1500px;width:100%;margin:0 auto}
+.view-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.view-head h2{font-size:18px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select{width:auto;min-width:140px}
+
+/* ---- chips & badges ---- */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--surface2);color:var(--muted);white-space:nowrap}
+.chip.dot::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.chip.late{background:var(--danger-soft);color:var(--danger)}
+.chip.today{background:var(--warn-soft);color:var(--warn)}
+.chip.ok{background:var(--accent-soft);color:var(--accent-ink)}
+.chip.info{background:var(--info-soft);color:var(--info)}
+.unread{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:inline-grid;place-items:center}
+
+/* ---- kanban ---- */
+.board{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;align-items:flex-start;min-height:60vh}
+.col{flex:0 0 272px;background:var(--surface2);border-radius:var(--r);padding:10px;max-height:calc(100vh - 150px);display:flex;flex-direction:column}
+.col-head{display:flex;align-items:center;gap:8px;padding:2px 4px 10px;font-family:var(--font-d);font-weight:600;font-size:13px}
+.col-head .sw{width:10px;height:10px;border-radius:3px}
+.col-head .cnt{margin-left:auto;color:var(--muted);font-weight:500}
+.col-body{overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:40px}
+.col.drag-over{outline:2px dashed var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.card:hover{border-color:var(--accent)}
+.card .name{font-weight:600;display:flex;align-items:center;gap:8px}
+.card .name span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.card .last{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card.dragging{opacity:.4}
+.mobile-cols{display:none;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px}
+.mobile-cols button{white-space:nowrap;border-radius:999px;padding:6px 12px;font-size:13px}
+.mobile-cols button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* ---- lists ---- */
+.section{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:14px}
+.section h3{font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.item:hover{background:var(--surface2)}
+.item .who{flex:1;min-width:0}
+.item .who b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .who span{font-size:12px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{color:var(--muted);padding:14px;text-align:center;font-size:13px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+tr.clickable{cursor:pointer}tr.clickable:hover td{background:var(--surface2)}
+
+/* ---- painel ---- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.kpi .v{font-family:var(--font-d);font-size:24px;font-weight:600;line-height:1.1}
+.kpi .l{font-size:12px;color:var(--muted);margin-top:2px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:150px 1fr 44px;align-items:center;gap:8px;font-size:13px}
+.bar .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .trk{height:10px;background:var(--surface2);border-radius:999px;overflow:hidden}
+.bar .fil{height:100%;background:var(--accent);border-radius:999px}
+.bar .n{text-align:right;color:var(--muted)}
+svg.chart{width:100%;height:160px;display:block}
+svg.chart text{fill:var(--muted);font-size:10px}
+svg.chart rect{fill:var(--accent)}
+svg.chart line{stroke:var(--line)}
+
+/* ---- drawer ---- */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:30}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--surface);z-index:31;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.drawer-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
+.drawer-head h2{font-size:17px;flex:1;min-width:0;word-break:break-word}
+.drawer-body{flex:1;overflow-y:auto;padding:16px}
+.drawer-foot{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}
+.wa-btn{display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;border:0;font-weight:600}
+.timeline{display:flex;flex-direction:column;gap:10px}
+.tl{display:grid;grid-template-columns:22px 1fr;gap:8px}
+.tl .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;background:var(--surface2);color:var(--muted)}
+.tl.msg_in .ic{background:var(--info-soft);color:var(--info)}
+.tl.msg_out .ic{background:var(--accent-soft);color:var(--accent-ink)}
+.tl.followup .ic{background:var(--warn-soft);color:var(--warn)}
+.tl.venda .ic{background:var(--accent);color:#fff}
+.tl.perda .ic{background:var(--danger-soft);color:var(--danger)}
+.tl .tx{white-space:pre-wrap;word-break:break-word}
+.tl .tm{font-size:11px;color:var(--muted)}
+.bubble{padding:8px 10px;border-radius:10px;background:var(--surface2);display:inline-block;max-width:100%}
+.tl.msg_out .bubble{background:var(--accent-soft)}
+details.adv summary{cursor:pointer;color:var(--muted);font-size:13px;margin:8px 0}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;z-index:50;font-weight:500;box-shadow:var(--shadow)}
+.modal{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(0,0,0,.35);padding:16px}
+.modal .box{background:var(--surface);border-radius:14px;padding:20px;width:min(520px,100%);max-height:90vh;overflow:auto}
+.cfg-list{display:flex;flex-direction:column;gap:6px}
+.cfg-item{display:flex;gap:8px;align-items:center}
+.cfg-item input[type=text]{flex:1}
+.cfg-item input[type=number]{width:70px}
+.cfg-item input[type=color]{width:38px;height:36px;padding:2px}
+.cfg-item select{width:120px}
+
+@media (max-width:720px){
+  main{padding:12px}
+  .topbar{padding:8px 10px;gap:8px}
+  .topbar .brand span.t{display:none}
+  .board{display:block;min-height:0}
+  .col{flex:none;max-height:none;display:none}
+  .col.on{display:flex}
+  .mobile-cols{display:flex}
+  .bar{grid-template-columns:110px 1fr 40px}
+  .drawer-foot button{flex:1}
+}
+@media (prefers-reduced-motion:no-preference){
+  .drawer{animation:slide .18s ease-out}
+  @keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <form class="login-card" id="loginForm">
+    <div class="brand" style="margin-bottom:18px"><span class="mark">K</span><span>Keep Vendas</span></div>
+    <p class="muted" style="margin:0 0 16px">CRM comercial da Keepads. Entre para ver o funil.</p>
+    <div class="field"><label>E-mail</label><input type="email" id="lEmail" autocomplete="username" required></div>
+    <div class="field"><label>Senha</label><input type="password" id="lPass" autocomplete="current-password" required></div>
+    <button class="primary" style="width:100%;padding:11px" type="submit">Entrar</button>
+    <div id="loginErr" class="msg-err hidden"></div>
+  </form>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <header class="topbar">
+    <div class="brand"><span class="mark">K</span><span class="t">Keep Vendas</span></div>
+    <nav id="nav">
+      <button data-v="funil" class="on">Funil</button>
+      <button data-v="hoje">Hoje <span class="badge-nav hidden" id="badgeHoje"></span></button>
+      <button data-v="leads">Leads</button>
+      <button data-v="painel">Painel</button>
+      <button data-v="ajustes">Ajustes</button>
+    </nav>
+    <div class="spacer"></div>
+    <button class="primary" id="btnNovo">+ Lead</button>
+  </header>
+
+  <main>
+    <!-- FUNIL -->
+    <section id="v-funil">
+      <div class="view-head">
+        <h2>Funil</h2>
+        <div class="toolbar">
+          <input type="search" id="fBusca" placeholder="Buscar nome ou telefone">
+          <label class="small" style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="fFechados" style="width:auto"> mostrar fechados</label>
+        </div>
+      </div>
+      <div class="mobile-cols" id="mobileCols"></div>
+      <div class="board" id="board"></div>
+    </section>
+
+    <!-- HOJE -->
+    <section id="v-hoje" class="hidden">
+      <div class="view-head"><h2>Hoje</h2><span class="muted small" id="hojeData"></span></div>
+      <div class="grid2">
+        <div class="section"><h3>Follow-ups atrasados <span class="chip late" id="cAtras">0</span></h3><div class="list" id="lAtras"></div></div>
+        <div class="section"><h3>Follow-ups de hoje <span class="chip today" id="cHoje">0</span></h3><div class="list" id="lHoje"></div></div>
+        <div class="section"><h3>Leads novos sem contato <span class="chip info" id="cNovos">0</span></h3><div class="list" id="lNovos"></div></div>
+        <div class="section"><h3>Mensagens não lidas <span class="chip ok" id="cUnread">0</span></h3><div class="list" id="lUnread"></div></div>
+        <div class="section"><h3>Próximos 7 dias <span class="chip" id="cProx">0</span></h3><div class="list" id="lProx"></div></div>
+      </div>
+    </section>
+
+    <!-- LEADS -->
+    <section id="v-leads" class="hidden">
+      <div class="view-head">
+        <h2>Leads</h2>
+        <div class="toolbar">
+          <input type="search" id="tBusca" placeholder="Buscar">
+          <select id="tEtapa"><option value="">Todas as etapas</option></select>
+          <select id="tOrigem"><option value="">Todas as origens</option></select>
+          <select id="tPeriodo"><option value="0">Qualquer data</option><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select>
+          <button id="btnCsv">Exportar CSV</button>
+        </div>
+      </div>
+      <div class="section table-wrap" style="padding:0">
+        <table>
+          <thead><tr><th>Nome</th><th>Telefone</th><th>Origem</th><th>Campanha / anúncio</th><th>Etapa</th><th>Follow-ups</th><th>Próximo</th><th>Entrada</th><th>Valor</th></tr></thead>
+          <tbody id="tBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PAINEL -->
+    <section id="v-painel" class="hidden">
+      <div class="view-head">
+        <h2>Painel</h2>
+        <div class="toolbar"><select id="pPeriodo"><option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="0">Tudo</option></select></div>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <div class="grid2">
+        <div class="section"><h3>Entradas por dia</h3><svg class="chart" id="chartDias" viewBox="0 0 600 160" preserveAspectRatio="none"></svg></div>
+        <div class="section"><h3>Leads por etapa (abertos)</h3><div class="bars" id="bEtapas"></div></div>
+        <div class="section"><h3>Leads por origem</h3><div class="bars" id="bOrigens"></div></div>
+        <div class="section"><h3>Leads por campanha / anúncio</h3><div class="bars" id="bCamp"></div></div>
+        <div class="section"><h3>Motivos de desistência</h3><div class="bars" id="bPerda"></div></div>
+      </div>
+    </section>
+
+    <!-- AJUSTES -->
+    <section id="v-ajustes" class="hidden">
+      <div class="view-head"><h2>Ajustes</h2></div>
+      <div class="grid2">
+        <div class="section">
+          <h3>Etapas do funil</h3>
+          <p class="muted small" style="margin-top:0">Ordem, nome, cor e tipo. Tipo "ganho" e "perdido" fecham o lead.</p>
+          <div class="cfg-list" id="cfgEtapas"></div>
+          <div class="row" style="margin-top:10px"><button id="addEtapa">+ Etapa</button><button class="primary" id="saveEtapas">Salvar etapas</button></div>
+        </div>
+        <div class="section">
+          <h3>Cadência de follow-up</h3>
+          <p class="muted small" style="margin-top:0">Dias sugeridos para o próximo contato depois de cada follow-up.</p>
+          <div class="cfg-list" id="cfgCad"></div>
+          <div class="row" style="margin-top:10px"><button class="primary" id="saveCad">Salvar cadência</button></div>
+          <h3 style="margin-top:20px">Origens</h3>
+          <div class="cfg-list" id="cfgOrigens"></div>
+          <div class="row" style="margin-top:10px"><button id="addOrigem">+ Origem</button><button class="primary" id="saveOrigens">Salvar origens</button></div>
+          <h3 style="margin-top:20px">Motivos de desistência</h3>
+          <div class="cfg-list" id="cfgMotivos"></div>
+          <div class="row" style="margin-top:10px"><button id="addMotivo">+ Motivo</button><button class="primary" id="saveMotivos">Salvar motivos</button></div>
+        </div>
+        <div class="section">
+          <h3>WhatsApp</h3>
+          <div id="waStatus" class="muted small">Carregando…</div>
+        </div>
+        <div class="section">
+          <h3>Conta</h3>
+          <p class="small muted" id="accEmail"></p>
+          <div class="field"><label>Nova senha</label><input type="password" id="newPass" autocomplete="new-password" placeholder="mínimo 8 caracteres"></div>
+          <div class="row"><button id="btnSenha">Alterar senha</button><button class="ghost" id="btnSair">Sair</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ DRAWER DO LEAD ============ -->
+<div id="drawerWrap" class="hidden">
+  <div class="overlay" id="overlay"></div>
+  <aside class="drawer" role="dialog" aria-modal="true">
+    <div class="drawer-head">
+      <h2 id="dNome">Lead</h2>
+      <button class="ghost" id="dClose" aria-label="Fechar">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="actions" id="dActions"></div>
+      <div class="row">
+        <div class="field"><label>Etapa</label><select id="dEtapa"></select></div>
+        <div class="field"><label>Próximo follow-up</label><input type="datetime-local" id="dProx"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Nome</label><input id="dNomeIn"></div>
+        <div class="field"><label>Telefone (com DDD)</label><input id="dTel" inputmode="tel"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Origem</label><select id="dOrigem"></select></div>
+        <div class="field"><label>Valor (R$)</label><input id="dValor" inputmode="decimal"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Campanha</label><input id="dCamp" placeholder="ex.: Keepads - Leads nov"></div>
+        <div class="field"><label>Anúncio</label><input id="dAnun" placeholder="ex.: Vídeo depoimento 02"></div>
+      </div>
+      <div class="field"><label>Observações</label><textarea id="dObs"></textarea></div>
+      <details class="adv"><summary>Mais campos</summary>
+        <div class="row">
+          <div class="field"><label>Empresa</label><input id="dEmp"></div>
+          <div class="field"><label>E-mail</label><input id="dEmail" type="email"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>ID do anúncio (Meta)</label><input id="dAdId"></div>
+          <div class="field"><label>Responsável</label><input id="dResp"></div>
+        </div>
+        <div class="small muted" id="dInfo"></div>
+      </details>
+      <div class="field" style="margin-top:14px">
+        <label>Nova anotação</label>
+        <div class="row"><textarea id="dNota" placeholder="Resumo da conversa, combinado, objeção…" style="min-height:60px"></textarea></div>
+        <div class="row" style="margin-top:6px"><button id="dAddNota">Adicionar anotação</button></div>
+      </div>
+      <h3 style="font-size:14px;margin:14px 0 8px">Histórico</h3>
+      <div class="timeline" id="dTimeline"></div>
+    </div>
+    <div class="drawer-foot">
+      <button class="primary" id="dSalvar">Salvar</button>
+      <button class="danger ghost" id="dExcluir">Excluir</button>
+    </div>
+  </aside>
+</div>
+
+<!-- ============ MODAL GENÉRICO ============ -->
+<div id="modal" class="modal hidden"><div class="box" id="modalBox"></div></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+// ============ CONFIG (injetada pelo deploy) ============
+const SUPABASE_URL = "https://nnqqgrutxcbefsptemse.supabase.co";
+const SUPABASE_ANON = "sb_publishable_OYGOMNMNVaa75nh8PQm0oA_IzqR0WhU";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ============ ESTADO ============
+const S = { user:null, etapas:[], origens:[], motivos:[], config:{}, leads:new Map(), view:"funil", mobileCol:null, openLead:null, channel:null };
+const $ = (id) => document.getElementById(id);
+const fmtDT = (d) => d ? new Date(d).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : "";
+const fmtD = (d) => d ? new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}) : "";
+const fmtR = (n) => n==null||n==="" ? "" : Number(n).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const soDigitos = (s) => (s||"").replace(/\D/g,"");
+const esc = (s) => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function telefoneE164(t){ let d=soDigitos(t); if(!d) return ""; const ddi=(S.config.empresa?.ddi)||"55"; if(d.length<=11) d=ddi+d; return d; }
+function telefoneBonito(t){ const d=soDigitos(t); if(d.length>=12){ const n=d.slice(2); return `(${n.slice(0,2)}) ${n.slice(2,-4)}-${n.slice(-4)}`;} return t||""; }
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.remove("hidden"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.add("hidden"),2200); }
+function etapa(id){ return S.etapas.find(e=>e.id===id); }
+function origemNome(id){ return S.origens.find(o=>o.id===id)?.nome || ""; }
+function aberto(l){ const e=etapa(l.etapa_id); return !e || e.tipo==="aberta"; }
+function diasDesde(d){ return Math.floor((Date.now()-new Date(d).getTime())/864e5); }
+function fuStatus(l){ if(!l.proximo_followup||!aberto(l)) return null; const p=new Date(l.proximo_followup); const hoje=new Date(); hoje.setHours(0,0,0,0); const fim=new Date(hoje); fim.setDate(fim.getDate()+1); if(p<hoje) return "late"; if(p<fim) return "today"; return "future"; }
+function leadsArr(){ return Array.from(S.leads.values()); }
+
+// ============ AUTH ============
+$("loginForm").addEventListener("submit", async (e)=>{
+  e.preventDefault(); $("loginErr").classList.add("hidden");
+  const { error } = await sb.auth.signInWithPassword({ email:$("lEmail").value.trim(), password:$("lPass").value });
+  if(error){ $("loginErr").textContent = "Não foi possível entrar. Confira e-mail e senha."; $("loginErr").classList.remove("hidden"); }
+});
+sb.auth.onAuthStateChange((ev, session)=>{
+  if(session?.user){ if(!S.user){ S.user=session.user; iniciar(); } }
+  else { S.user=null; $("app").classList.add("hidden"); $("login").classList.remove("hidden"); if(S.channel){ sb.removeChannel(S.channel); S.channel=null; } }
+});
+$("btnSair").onclick = ()=> sb.auth.signOut();
+$("btnSenha").onclick = async ()=>{ const p=$("newPass").value; if(p.length<8) return toast("Senha precisa ter 8+ caracteres"); const {error}=await sb.auth.updateUser({password:p}); toast(error?"Erro ao alterar senha":"Senha alterada"); if(!error) $("newPass").value=""; };
+
+// ============ CARGA ============
+async function iniciar(){
+  $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+  $("accEmail").textContent = S.user.email;
+  await carregarCadastros();
+  await carregarLeads();
+  assinarTempoReal();
+  render();
+}
+async function carregarCadastros(){
+  const [e,o,m,c] = await Promise.all([
+    sb.from("etapas").select("*").eq("ativo",true).order("ordem"),
+    sb.from("origens").select("*").eq("ativo",true).order("nome"),
+    sb.from("motivos_perda").select("*").eq("ativo",true).order("nome"),
+    sb.from("config").select("*"),
+  ]);
+  S.etapas=e.data||[]; S.origens=o.data||[]; S.motivos=m.data||[];
+  S.config={}; (c.data||[]).forEach(r=>S.config[r.chave]=r.valor);
+  if(!S.mobileCol && S.etapas[0]) S.mobileCol=S.etapas[0].id;
+}
+async function carregarLeads(){
+  const { data, error } = await sb.from("leads").select("*").order("criado_em",{ascending:false}).limit(5000);
+  if(error){ toast("Erro ao carregar leads"); return; }
+  S.leads=new Map(data.map(l=>[l.id,l]));
+}
+function assinarTempoReal(){
+  if(S.channel) return;
+  S.channel = sb.channel("kv-leads")
+    .on("postgres_changes",{event:"*",schema:"public",table:"leads"},(p)=>{
+      if(p.eventType==="DELETE"){ S.leads.delete(p.old.id); }
+      else { S.leads.set(p.new.id,p.new); if(S.openLead&&S.openLead.id===p.new.id&&p.eventType==="UPDATE"&&p.new.ultima_msg_em!==S.openLead.ultima_msg_em){ S.openLead=p.new; carregarTimeline(); } }
+      render();
+    })
+    .subscribe();
+}
+
+// ============ NAVEGAÇÃO ============
+$("nav").addEventListener("click",(e)=>{ const b=e.target.closest("button"); if(!b) return; S.view=b.dataset.v; render(); });
+function render(){
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view));
+  ["funil","hoje","leads","painel","ajustes"].forEach(v=>$("v-"+v).classList.toggle("hidden",v!==S.view));
+  renderBadge();
+  ({funil:renderFunil,hoje:renderHoje,leads:renderTabela,painel:renderPainel,ajustes:renderAjustes})[S.view]();
+}
+function renderBadge(){
+  const n = leadsArr().filter(l=>fuStatus(l)==="late"||fuStatus(l)==="today"||(l.nao_lidas>0&&aberto(l))).length;
+  const b=$("badgeHoje"); b.textContent=n; b.classList.toggle("hidden",n===0);
+}
+
+// ============ FUNIL (KANBAN) ============
+$("fBusca").oninput = renderFunil; $("fFechados").onchange = renderFunil;
+function cardHTML(l){
+  const fs=fuStatus(l); const e=etapa(l.etapa_id);
+  const chips=[];
+  if(l.nao_lidas>0) chips.push(`<span class="unread">${l.nao_lidas}</span>`);
+  if(fs==="late") chips.push(`<span class="chip late">atrasado ${fmtD(l.proximo_followup)}</span>`);
+  else if(fs==="today") chips.push(`<span class="chip today">hoje ${new Date(l.proximo_followup).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>`);
+  else if(fs==="future") chips.push(`<span class="chip">${fmtD(l.proximo_followup)}</span>`);
+  if(l.origem_id) chips.push(`<span class="chip">${esc(origemNome(l.origem_id))}</span>`);
+  if(l.followups_feitos>0) chips.push(`<span class="chip">FU ${l.followups_feitos}</span>`);
+  if(l.valor) chips.push(`<span class="chip ok">${fmtR(l.valor)}</span>`);
+  const dias=diasDesde(l.etapa_desde);
+  return `<div class="card" draggable="true" data-id="${l.id}">
+    <div class="name"><span>${esc(l.nome||telefoneBonito(l.telefone)||"Sem nome")}</span><span class="small muted num">${dias}d</span></div>
+    ${l.anuncio||l.campanha?`<div class="small muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.campanha||"")}${l.campanha&&l.anuncio?" · ":""}${esc(l.anuncio||"")}</div>`:""}
+    ${l.ultima_msg_texto?`<div class="last">${l.ultima_msg_dir==="out"?"Você: ":""}${esc(l.ultima_msg_texto)}</div>`:""}
+    <div class="meta">${chips.join("")}</div>
+  </div>`;
+}
+function filtroBusca(l,q){ if(!q) return true; q=q.toLowerCase(); return (l.nome||"").toLowerCase().includes(q)||soDigitos(l.telefone).includes(soDigitos(q))||(l.campanha||"").toLowerCase().includes(q)||(l.anuncio||"").toLowerCase().includes(q); }
+function renderFunil(){
+  const q=$("fBusca").value.trim(); const mostrarFechados=$("fFechados").checked;
+  const etapas=S.etapas.filter(e=>mostrarFechados||e.tipo==="aberta");
+  const leads=leadsArr().filter(l=>filtroBusca(l,q));
+  const ordena=(a,b)=>{ const r={late:0,today:1,future:2,null:3}; const d=(r[fuStatus(a)]??3)-(r[fuStatus(b)]??3); return d||(new Date(b.atualizado_em)-new Date(a.atualizado_em)); };
+  $("board").innerHTML = etapas.map(e=>{
+    const ls=leads.filter(l=>l.etapa_id===e.id).sort(ordena);
+    return `<div class="col ${S.mobileCol===e.id?"on":""}" data-etapa="${e.id}">
+      <div class="col-head"><span class="sw" style="background:${e.cor}"></span>${esc(e.nome)}<span class="cnt num">${ls.length}</span></div>
+      <div class="col-body">${ls.map(cardHTML).join("")||`<div class="empty">vazio</div>`}</div>
+    </div>`;
+  }).join("");
+  $("mobileCols").innerHTML = etapas.map(e=>{ const n=leads.filter(l=>l.etapa_id===e.id).length; return `<button data-col="${e.id}" class="${S.mobileCol===e.id?"on":""}">${esc(e.nome)} <span class="num">${n}</span></button>`; }).join("");
+}
+$("mobileCols").addEventListener("click",(e)=>{ const b=e.target.closest("button"); if(!b) return; S.mobileCol=Number(b.dataset.col); renderFunil(); });
+$("board").addEventListener("click",(e)=>{ const c=e.target.closest(".card"); if(c) abrirLead(c.dataset.id); });
+// arrastar e soltar entre colunas (desktop)
+let dragId=null;
+$("board").addEventListener("dragstart",(e)=>{ const c=e.target.closest(".card"); if(!c) return; dragId=c.dataset.id; c.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; });
+$("board").addEventListener("dragend",()=>{ dragId=null; document.querySelectorAll(".card.dragging").forEach(c=>c.classList.remove("dragging")); document.querySelectorAll(".col.drag-over").forEach(c=>c.classList.remove("drag-over")); });
+$("board").addEventListener("dragover",(e)=>{ const col=e.target.closest(".col"); if(!col||!dragId) return; e.preventDefault(); document.querySelectorAll(".col.drag-over").forEach(c=>c!==col&&c.classList.remove("drag-over")); col.classList.add("drag-over"); });
+$("board").addEventListener("drop",async (e)=>{ const col=e.target.closest(".col"); if(!col||!dragId) return; e.preventDefault(); const id=dragId; dragId=null; await mudarEtapa(id, Number(col.dataset.etapa)); });
+
+// ============ HOJE ============
+function itemHTML(l, extra){
+  return `<div class="item" data-id="${l.id}">
+    <div class="who"><b>${esc(l.nome||telefoneBonito(l.telefone)||"Sem nome")}</b><span>${esc(etapa(l.etapa_id)?.nome||"")}${l.ultima_msg_texto?" · "+esc(l.ultima_msg_texto):""}</span></div>
+    ${extra||""}
+    <a class="wa-btn" style="padding:6px 10px;border-radius:8px;text-decoration:none;font-size:12px" href="https://wa.me/${telefoneE164(l.telefone)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">WhatsApp</a>
+  </div>`;
+}
+function renderHoje(){
+  $("hojeData").textContent = new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
+  const ls=leadsArr().filter(aberto);
+  const byFu=(a,b)=>new Date(a.proximo_followup)-new Date(b.proximo_followup);
+  const atras=ls.filter(l=>fuStatus(l)==="late").sort(byFu);
+  const hoje=ls.filter(l=>fuStatus(l)==="today").sort(byFu);
+  const lim=new Date(); lim.setDate(lim.getDate()+7);
+  const prox=ls.filter(l=>fuStatus(l)==="future"&&new Date(l.proximo_followup)<=lim).sort(byFu);
+  const primeira=S.etapas[0]?.id;
+  const novos=ls.filter(l=>l.etapa_id===primeira).sort((a,b)=>new Date(a.criado_em)-new Date(b.criado_em));
+  const unread=ls.filter(l=>l.nao_lidas>0).sort((a,b)=>new Date(b.ultima_msg_em)-new Date(a.ultima_msg_em));
+  const fill=(id,cid,arr,fn)=>{ $(cid).textContent=arr.length; $(id).innerHTML=arr.map(fn).join("")||`<div class="empty">nada por aqui</div>`; };
+  fill("lAtras","cAtras",atras,l=>itemHTML(l,`<span class="chip late">${fmtD(l.proximo_followup)}</span>`));
+  fill("lHoje","cHoje",hoje,l=>itemHTML(l,`<span class="chip today">${new Date(l.proximo_followup).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>`));
+  fill("lProx","cProx",prox,l=>itemHTML(l,`<span class="chip">${fmtDT(l.proximo_followup)}</span>`));
+  fill("lNovos","cNovos",novos,l=>itemHTML(l,`<span class="chip info">${diasDesde(l.criado_em)===0?"hoje":diasDesde(l.criado_em)+"d"}</span>`));
+  fill("lUnread","cUnread",unread,l=>itemHTML(l,`<span class="unread">${l.nao_lidas}</span>`));
+}
+document.querySelectorAll("#v-hoje .list").forEach(el=>el.addEventListener("click",(e)=>{ const it=e.target.closest(".item"); if(it) abrirLead(it.dataset.id); }));
+
+// ============ TABELA ============
+["tBusca","tEtapa","tOrigem","tPeriodo"].forEach(id=>$(id).addEventListener("input",renderTabela));
+function leadsFiltradosTabela(){
+  const q=$("tBusca").value.trim(); const et=Number($("tEtapa").value)||0; const og=Number($("tOrigem").value)||0; const per=Number($("tPeriodo").value)||0;
+  const lim=per?Date.now()-per*864e5:0;
+  return leadsArr().filter(l=>filtroBusca(l,q)&&(!et||l.etapa_id===et)&&(!og||l.origem_id===og)&&(!lim||new Date(l.criado_em).getTime()>=lim));
+}
+function renderTabela(){
+  const se=$("tEtapa"), so=$("tOrigem");
+  if(se.options.length-1!==S.etapas.length){ se.innerHTML=`<option value="">Todas as etapas</option>`+S.etapas.map(e=>`<option value="${e.id}">${esc(e.nome)}</option>`).join(""); }
+  if(so.options.length-1!==S.origens.length){ so.innerHTML=`<option value="">Todas as origens</option>`+S.origens.map(o=>`<option value="${o.id}">${esc(o.nome)}</option>`).join(""); }
+  const ls=leadsFiltradosTabela();
+  $("tBody").innerHTML = ls.map(l=>{ const e=etapa(l.etapa_id); const fs=fuStatus(l); return `<tr class="clickable" data-id="${l.id}">
+    <td>${esc(l.nome||"")}</td><td class="num">${esc(telefoneBonito(l.telefone))}</td><td>${esc(origemNome(l.origem_id))}</td>
+    <td>${esc([l.campanha,l.anuncio].filter(Boolean).join(" · "))}</td>
+    <td><span class="chip dot" style="color:${e?.cor||"#888"}">${esc(e?.nome||"")}</span></td>
+    <td class="num">${l.followups_feitos}</td><td class="num">${fs?`<span class="chip ${fs==="late"?"late":fs==="today"?"today":""}">${fmtDT(l.proximo_followup)}</span>`:""}</td>
+    <td class="num">${fmtDT(l.criado_em)}</td><td class="num">${fmtR(l.valor)}</td></tr>`; }).join("") || `<tr><td colspan="9" class="empty">Nenhum lead com esses filtros</td></tr>`;
+}
+$("tBody").addEventListener("click",(e)=>{ const tr=e.target.closest("tr[data-id]"); if(tr) abrirLead(tr.dataset.id); });
+$("btnCsv").onclick=()=>{
+  const ls=leadsFiltradosTabela();
+  const cols=["nome","telefone","email","empresa","origem","campanha","anuncio","ad_id","etapa","followups_feitos","proximo_followup","valor","motivo_perda","criado_em","fechado_em","observacoes"];
+  const linha=(l)=>cols.map(c=>{ let v=c==="origem"?origemNome(l.origem_id):c==="etapa"?etapa(l.etapa_id)?.nome:c==="motivo_perda"?S.motivos.find(m=>m.id===l.motivo_perda_id)?.nome:l[c]; v=v==null?"":String(v); return `"${v.replace(/"/g,'""')}"`; }).join(";");
+  const csv="﻿"+cols.join(";")+"\n"+ls.map(linha).join("\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); a.download=`keep-vendas-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+};
+
+// ============ PAINEL ============
+$("pPeriodo").onchange=renderPainel;
+function barras(el, pares){
+  const max=Math.max(1,...pares.map(p=>p[1]));
+  el.innerHTML = pares.length? pares.map(([k,v])=>`<div class="bar"><span class="lbl" title="${esc(k)}">${esc(k)}</span><div class="trk"><div class="fil" style="width:${v/max*100}%"></div></div><span class="n num">${v}</span></div>`).join("") : `<div class="empty">sem dados</div>`;
+}
+function contar(arr, fn){ const m=new Map(); arr.forEach(l=>{ const k=fn(l)||"(não informado)"; m.set(k,(m.get(k)||0)+1); }); return Array.from(m.entries()).sort((a,b)=>b[1]-a[1]).slice(0,12); }
+function renderPainel(){
+  const per=Number($("pPeriodo").value)||0; const lim=per?Date.now()-per*864e5:0;
+  const all=leadsArr(); const ls=all.filter(l=>!lim||new Date(l.criado_em).getTime()>=lim);
+  const ganhos=ls.filter(l=>etapa(l.etapa_id)?.tipo==="ganho"); const perdidos=ls.filter(l=>etapa(l.etapa_id)?.tipo==="perdido");
+  const abertos=all.filter(aberto);
+  const receita=ganhos.reduce((s,l)=>s+Number(l.valor||0),0);
+  const conv=ls.length?Math.round(ganhos.length/ls.length*100):0;
+  const atras=abertos.filter(l=>fuStatus(l)==="late").length;
+  const k=[["Leads no período",ls.length],["Vendas",ganhos.length],["Conversão",conv+"%"],["Receita",fmtR(receita)||"R$ 0"],["Em aberto (total)",abertos.length],["Follow-ups atrasados",atras],["Desistências",perdidos.length]];
+  $("kpis").innerHTML=k.map(([l,v])=>`<div class="kpi"><div class="v num">${v}</div><div class="l">${l}</div></div>`).join("");
+  // entradas por dia (últimos N dias, máx 60)
+  const n=Math.min(per||60,60); const dias=[]; const hoje=new Date(); hoje.setHours(0,0,0,0);
+  for(let i=n-1;i>=0;i--){ const d=new Date(hoje); d.setDate(d.getDate()-i); dias.push([d,0]); }
+  all.forEach(l=>{ const d=new Date(l.criado_em); d.setHours(0,0,0,0); const idx=Math.round((d-dias[0][0])/864e5); if(idx>=0&&idx<n) dias[idx][1]++; });
+  const max=Math.max(1,...dias.map(d=>d[1])); const W=600,H=160,pad=18,bw=(W-pad*2)/n;
+  let svg=`<line x1="${pad}" y1="${H-18}" x2="${W-pad}" y2="${H-18}"/>`;
+  dias.forEach(([d,v],i)=>{ const h=(H-30)*v/max; const x=pad+i*bw; svg+=`<rect x="${x+1}" y="${H-18-h}" width="${Math.max(1,bw-2)}" height="${h}" rx="1"><title>${d.toLocaleDateString("pt-BR")}: ${v}</title></rect>`; if(v===max&&v>0) svg+=`<text x="${x+bw/2}" y="${H-22-h}" text-anchor="middle">${v}</text>`; if(i%Math.ceil(n/8)===0) svg+=`<text x="${x+bw/2}" y="${H-5}" text-anchor="middle">${d.getDate()}/${d.getMonth()+1}</text>`; });
+  $("chartDias").innerHTML=svg;
+  barras($("bEtapas"), S.etapas.filter(e=>e.tipo==="aberta").map(e=>[e.nome,abertos.filter(l=>l.etapa_id===e.id).length]));
+  barras($("bOrigens"), contar(ls,l=>origemNome(l.origem_id)));
+  barras($("bCamp"), contar(ls.filter(l=>l.campanha||l.anuncio),l=>[l.campanha,l.anuncio].filter(Boolean).join(" · ")));
+  barras($("bPerda"), contar(perdidos,l=>S.motivos.find(m=>m.id===l.motivo_perda_id)?.nome));
+}
+
+// ============ LEAD: ABRIR / SALVAR ============
+$("btnNovo").onclick = ()=> abrirLead(null);
+$("dClose").onclick = fecharLead; $("overlay").onclick = fecharLead;
+document.addEventListener("keydown",(e)=>{ if(e.key==="Escape"){ if(!$("modal").classList.contains("hidden")) fecharModal(); else if(!$("drawerWrap").classList.contains("hidden")) fecharLead(); } });
+function fecharLead(){ $("drawerWrap").classList.add("hidden"); S.openLead=null; }
+function toLocalInput(d){ if(!d) return ""; const x=new Date(d); x.setMinutes(x.getMinutes()-x.getTimezoneOffset()); return x.toISOString().slice(0,16); }
+async function abrirLead(id){
+  const l = id ? S.leads.get(id) : { id:null, etapa_id:S.etapas[0]?.id, followups_feitos:0 };
+  if(!l) return;
+  S.openLead=l;
+  $("dNome").textContent = l.id ? (l.nome||telefoneBonito(l.telefone)||"Lead") : "Novo lead";
+  $("dEtapa").innerHTML = S.etapas.map(e=>`<option value="${e.id}" ${e.id===l.etapa_id?"selected":""}>${esc(e.nome)}</option>`).join("");
+  $("dOrigem").innerHTML = `<option value="">—</option>`+S.origens.map(o=>`<option value="${o.id}" ${o.id===l.origem_id?"selected":""}>${esc(o.nome)}</option>`).join("");
+  $("dProx").value=toLocalInput(l.proximo_followup);
+  $("dNomeIn").value=l.nome||""; $("dTel").value=l.telefone?telefoneBonito(l.telefone):""; $("dValor").value=l.valor??"";
+  $("dCamp").value=l.campanha||""; $("dAnun").value=l.anuncio||""; $("dObs").value=l.observacoes||"";
+  $("dEmp").value=l.empresa||""; $("dEmail").value=l.email||""; $("dAdId").value=l.ad_id||""; $("dResp").value=l.responsavel||"";
+  $("dInfo").innerHTML = l.id ? `Entrou em ${fmtDT(l.criado_em)} · na etapa atual há ${diasDesde(l.etapa_desde)} dia(s) · ${l.followups_feitos} follow-up(s)${l.ctwa_clid?` · clique de anúncio rastreado`:""}` : "";
+  $("dExcluir").classList.toggle("hidden",!l.id);
+  $("dNota").value="";
+  // ações rápidas
+  const tel=telefoneE164(l.telefone);
+  const ab=aberto(l);
+  $("dActions").innerHTML = l.id ? `
+    ${tel?`<a class="wa-btn" style="padding:8px 12px;border-radius:10px;text-decoration:none" href="https://wa.me/${tel}" target="_blank" rel="noopener">Abrir WhatsApp</a>`:""}
+    ${ab?`<button id="aFu">Registrar follow-up ${l.followups_feitos+1}</button>`:""}
+    ${ab?`<button id="aVenda" class="primary">Venda concluída</button>`:""}
+    ${ab?`<button id="aPerda" class="danger">Desistiu</button>`:`<button id="aReabrir">Reabrir lead</button>`}
+    ${l.nao_lidas>0?`<button id="aLido" class="ghost">Marcar como lido</button>`:""}` : "";
+  if(l.id){
+    $("aFu")&&($("aFu").onclick=()=>registrarFollowup(l));
+    $("aVenda")&&($("aVenda").onclick=()=>marcarVenda(l));
+    $("aPerda")&&($("aPerda").onclick=()=>marcarPerda(l));
+    $("aReabrir")&&($("aReabrir").onclick=()=>reabrir(l));
+    $("aLido")&&($("aLido").onclick=async()=>{ await sb.from("leads").update({nao_lidas:0}).eq("id",l.id); toast("Marcado como lido"); });
+  }
+  $("drawerWrap").classList.remove("hidden");
+  $("dTimeline").innerHTML = l.id ? `<div class="empty">carregando…</div>` : `<div class="empty">O histórico aparece depois de salvar.</div>`;
+  if(l.id) carregarTimeline();
+}
+async function carregarTimeline(){
+  const l=S.openLead; if(!l?.id) return;
+  const [i,m] = await Promise.all([
+    sb.from("interacoes").select("*").eq("lead_id",l.id).order("criado_em",{ascending:false}).limit(200),
+    sb.from("mensagens").select("*").eq("lead_id",l.id).order("enviado_em",{ascending:false}).limit(200),
+  ]);
+  const itens=[...(i.data||[]).filter(x=>x.tipo!=="msg_in"&&x.tipo!=="msg_out").map(x=>({t:x.tipo,tx:x.texto,at:x.criado_em,por:x.por})),
+               ...(m.data||[]).map(x=>({t:x.direcao==="in"?"msg_in":"msg_out",tx:x.texto,at:x.enviado_em,status:x.status}))]
+    .sort((a,b)=>new Date(b.at)-new Date(a.at));
+  const ic={nota:"✎",followup:"↻",etapa:"→",msg_in:"↙",msg_out:"↗",criado:"+",venda:"✓",perda:"✕"};
+  $("dTimeline").innerHTML = itens.length ? itens.map(x=>`<div class="tl ${x.t}"><div class="ic">${ic[x.t]||"•"}</div><div>${x.t.startsWith("msg")?`<span class="bubble tx">${esc(x.tx)}</span>`:`<div class="tx">${esc(x.tx||"")}</div>`}<div class="tm">${fmtDT(x.at)}${x.por?" · "+esc(x.por):""}${x.status&&x.t==="msg_out"?" · "+esc(x.status):""}</div></div></div>`).join("") : `<div class="empty">Sem histórico ainda</div>`;
+}
+function lerForm(){
+  return {
+    nome:$("dNomeIn").value.trim()||null, telefone:telefoneE164($("dTel").value)||null,
+    etapa_id:Number($("dEtapa").value)||null, origem_id:Number($("dOrigem").value)||null,
+    proximo_followup:$("dProx").value?new Date($("dProx").value).toISOString():null,
+    valor:$("dValor").value?Number(String($("dValor").value).replace(/\./g,"").replace(",",".")):null,
+    campanha:$("dCamp").value.trim()||null, anuncio:$("dAnun").value.trim()||null, observacoes:$("dObs").value.trim()||null,
+    empresa:$("dEmp").value.trim()||null, email:$("dEmail").value.trim()||null, ad_id:$("dAdId").value.trim()||null, responsavel:$("dResp").value.trim()||null,
+  };
+}
+$("dSalvar").onclick = async ()=>{
+  const l=S.openLead; const f=lerForm();
+  if(!f.nome&&!f.telefone) return toast("Informe pelo menos nome ou telefone");
+  if(l.id){
+    const antes=S.leads.get(l.id);
+    const { error } = await sb.from("leads").update(f).eq("id",l.id);
+    if(error) return toast("Erro ao salvar: "+error.message);
+    if(antes&&antes.etapa_id!==f.etapa_id) await registrarInteracao(l.id,"etapa",`Etapa: ${etapa(antes.etapa_id)?.nome||"?"} → ${etapa(f.etapa_id)?.nome||"?"}`);
+    toast("Salvo");
+  } else {
+    if(f.telefone){ const dup=leadsArr().find(x=>x.telefone===f.telefone); if(dup&&!confirm("Já existe um lead com esse telefone ("+(dup.nome||"sem nome")+"). Criar mesmo assim?")) return; }
+    f.wa_id=f.telefone||null; f.responsavel=f.responsavel||S.user.email;
+    const { data, error } = await sb.from("leads").insert(f).select("*").single();
+    if(error) return toast("Erro ao criar: "+error.message);
+    S.leads.set(data.id,data);
+    await registrarInteracao(data.id,"criado","Lead cadastrado manualmente");
+    toast("Lead criado");
+  }
+  fecharLead(); render();
+};
+$("dExcluir").onclick = async ()=>{ const l=S.openLead; if(!l?.id||!confirm("Excluir este lead e todo o histórico?")) return; await sb.from("leads").delete().eq("id",l.id); S.leads.delete(l.id); fecharLead(); render(); toast("Lead excluído"); };
+$("dAddNota").onclick = async ()=>{ const l=S.openLead; const t=$("dNota").value.trim(); if(!l?.id||!t) return; await registrarInteracao(l.id,"nota",t); $("dNota").value=""; carregarTimeline(); toast("Anotação adicionada"); };
+async function registrarInteracao(leadId,tipo,texto,meta){ await sb.from("interacoes").insert({lead_id:leadId,tipo,texto,meta:meta||null,por:S.user?.email||null}); }
+async function mudarEtapa(id, etapaId){
+  const l=S.leads.get(id); if(!l||l.etapa_id===etapaId) return;
+  const e=etapa(etapaId); const patch={etapa_id:etapaId};
+  if(e?.tipo!=="aberta"){ patch.fechado_em=new Date().toISOString(); patch.proximo_followup=null; } else { patch.fechado_em=null; }
+  const { error } = await sb.from("leads").update(patch).eq("id",id);
+  if(error) return toast("Erro: "+error.message);
+  await registrarInteracao(id,"etapa",`Etapa: ${etapa(l.etapa_id)?.nome||"?"} → ${e?.nome||"?"}`);
+  Object.assign(l,patch); render();
+}
+
+// ---- ações rápidas ----
+function sugerirProximo(n){ const c=S.config.cadencia_dias||{}; const dias=Number(c[String(n)]??c.padrao??2); const d=new Date(); d.setDate(d.getDate()+dias); d.setHours(9,0,0,0); return d; }
+async function registrarFollowup(l){
+  const n=(l.followups_feitos||0)+1;
+  const sug=sugerirProximo(n);
+  abrirModal(`<h3>Follow-up ${n}</h3>
+    <div class="field" style="margin-top:10px"><label>O que aconteceu</label><textarea id="mTexto" placeholder="ex.: mandei áudio explicando o plano, ficou de responder amanhã"></textarea></div>
+    <div class="field"><label>Próximo contato</label><input type="datetime-local" id="mProx" value="${toLocalInput(sug)}"></div>
+    <div class="row"><button class="primary" id="mOk">Registrar</button><button id="mCancel">Cancelar</button></div>`);
+  $("mCancel").onclick=fecharModal;
+  $("mOk").onclick=async ()=>{
+    const fuEtapa=S.etapas.find(e=>e.nome.toLowerCase().replace(/\s+/g,"")===`follow-up${n}`||e.nome.toLowerCase().replace(/\s+/g,"")===`followup${n}`);
+    const patch={followups_feitos:n, proximo_followup:$("mProx").value?new Date($("mProx").value).toISOString():null};
+    if(fuEtapa) patch.etapa_id=fuEtapa.id;
+    const { error } = await sb.from("leads").update(patch).eq("id",l.id);
+    if(error) return toast("Erro: "+error.message);
+    await registrarInteracao(l.id,"followup",`Follow-up ${n}${$("mTexto").value.trim()?": "+$("mTexto").value.trim():""}`);
+    if(fuEtapa&&fuEtapa.id!==l.etapa_id) await registrarInteracao(l.id,"etapa",`Etapa: ${etapa(l.etapa_id)?.nome||"?"} → ${fuEtapa.nome}`);
+    Object.assign(l,patch); fecharModal(); abrirLead(l.id); render(); toast("Follow-up registrado");
+  };
+}
+async function marcarVenda(l){
+  const ganho=S.etapas.find(e=>e.tipo==="ganho"); if(!ganho) return toast("Crie uma etapa do tipo ganho em Ajustes");
+  abrirModal(`<h3>Venda concluída</h3>
+    <div class="field" style="margin-top:10px"><label>Valor fechado (R$)</label><input id="mValor" inputmode="decimal" value="${l.valor??""}"></div>
+    <div class="field"><label>Observação</label><input id="mTexto" placeholder="plano, condição, prazo"></div>
+    <div class="row"><button class="primary" id="mOk">Confirmar venda</button><button id="mCancel">Cancelar</button></div>`);
+  $("mCancel").onclick=fecharModal;
+  $("mOk").onclick=async ()=>{
+    const v=$("mValor").value?Number(String($("mValor").value).replace(/\./g,"").replace(",",".")):null;
+    const patch={etapa_id:ganho.id,valor:v,fechado_em:new Date().toISOString(),proximo_followup:null};
+    const { error } = await sb.from("leads").update(patch).eq("id",l.id); if(error) return toast("Erro: "+error.message);
+    await registrarInteracao(l.id,"venda",`Venda concluída${v?" · "+fmtR(v):""}${$("mTexto").value.trim()?" · "+$("mTexto").value.trim():""}`);
+    Object.assign(l,patch); fecharModal(); fecharLead(); render(); toast("Venda registrada");
+  };
+}
+async function marcarPerda(l){
+  const perd=S.etapas.find(e=>e.tipo==="perdido"); if(!perd) return toast("Crie uma etapa do tipo perdido em Ajustes");
+  abrirModal(`<h3>Desistiu</h3>
+    <div class="field" style="margin-top:10px"><label>Motivo</label><select id="mMotivo">${S.motivos.map(m=>`<option value="${m.id}">${esc(m.nome)}</option>`).join("")}</select></div>
+    <div class="field"><label>Observação</label><input id="mTexto"></div>
+    <div class="row"><button class="danger" id="mOk">Confirmar</button><button id="mCancel">Cancelar</button></div>`);
+  $("mCancel").onclick=fecharModal;
+  $("mOk").onclick=async ()=>{
+    const mid=Number($("mMotivo").value)||null;
+    const patch={etapa_id:perd.id,motivo_perda_id:mid,fechado_em:new Date().toISOString(),proximo_followup:null};
+    const { error } = await sb.from("leads").update(patch).eq("id",l.id); if(error) return toast("Erro: "+error.message);
+    await registrarInteracao(l.id,"perda",`Desistiu · ${S.motivos.find(m=>m.id===mid)?.nome||""}${$("mTexto").value.trim()?" · "+$("mTexto").value.trim():""}`);
+    Object.assign(l,patch); fecharModal(); fecharLead(); render(); toast("Registrado");
+  };
+}
+async function reabrir(l){
+  const alvo=S.etapas.find(e=>e.tipo==="aberta"&&/negocia/i.test(e.nome))||S.etapas.find(e=>e.tipo==="aberta");
+  const patch={etapa_id:alvo.id,fechado_em:null,motivo_perda_id:null};
+  await sb.from("leads").update(patch).eq("id",l.id); await registrarInteracao(l.id,"etapa",`Lead reaberto → ${alvo.nome}`);
+  Object.assign(l,patch); abrirLead(l.id); render(); toast("Lead reaberto");
+}
+function abrirModal(html){ $("modalBox").innerHTML=html; $("modal").classList.remove("hidden"); }
+function fecharModal(){ $("modal").classList.add("hidden"); }
+$("modal").addEventListener("click",(e)=>{ if(e.target.id==="modal") fecharModal(); });
+
+// ============ AJUSTES ============
+function renderAjustes(){
+  $("cfgEtapas").innerHTML = S.etapas.map(e=>`<div class="cfg-item" data-id="${e.id}">
+    <input type="number" value="${e.ordem}" title="ordem"><input type="text" value="${esc(e.nome)}"><input type="color" value="${e.cor||"#139A5B"}">
+    <select><option value="aberta" ${e.tipo==="aberta"?"selected":""}>aberta</option><option value="ganho" ${e.tipo==="ganho"?"selected":""}>ganho</option><option value="perdido" ${e.tipo==="perdido"?"selected":""}>perdido</option></select>
+    <button class="ghost" data-del title="Desativar">✕</button></div>`).join("");
+  const cad=S.config.cadencia_dias||{};
+  $("cfgCad").innerHTML = [1,2,3,4,5,6].map(n=>`<div class="cfg-item"><span style="width:120px">Após follow-up ${n}</span><input type="number" min="0" data-n="${n}" value="${cad[String(n)]??cad.padrao??2}"><span class="muted small">dias</span></div>`).join("")
+    + `<div class="cfg-item"><span style="width:120px">Padrão</span><input type="number" min="0" data-n="padrao" value="${cad.padrao??7}"><span class="muted small">dias</span></div>`;
+  $("cfgOrigens").innerHTML = S.origens.map(o=>`<div class="cfg-item" data-id="${o.id}"><input type="text" value="${esc(o.nome)}"><button class="ghost" data-del>✕</button></div>`).join("");
+  $("cfgMotivos").innerHTML = S.motivos.map(m=>`<div class="cfg-item" data-id="${m.id}"><input type="text" value="${esc(m.nome)}"><button class="ghost" data-del>✕</button></div>`).join("");
+  renderWaStatus();
+}
+async function renderWaStatus(){
+  const { data } = await sb.from("webhook_log").select("recebido_em,campo,erro").order("recebido_em",{ascending:false}).limit(1);
+  const ultimo=data?.[0];
+  $("waStatus").innerHTML = ultimo
+    ? `Número conectado. Último evento recebido em <b>${fmtDT(ultimo.recebido_em)}</b> (${esc(ultimo.campo||"")})${ultimo.erro?`<div class="msg-err">Último erro: ${esc(ultimo.erro)}</div>`:""}`
+    : `Número ainda não conectado. Quando o webhook da Meta for ligado (Fase 2), as mensagens recebidas aparecem aqui e os leads entram sozinhos no funil.`;
+}
+["cfgEtapas","cfgOrigens","cfgMotivos"].forEach(id=>$(id).addEventListener("click",(e)=>{ const b=e.target.closest("[data-del]"); if(!b) return; const it=b.closest(".cfg-item"); it.dataset.del="1"; it.style.opacity=.4; }));
+$("addEtapa").onclick=()=>{ $("cfgEtapas").insertAdjacentHTML("beforeend",`<div class="cfg-item" data-id=""><input type="number" value="${(S.etapas.at(-1)?.ordem||0)+10}"><input type="text" placeholder="Nome da etapa"><input type="color" value="#139A5B"><select><option value="aberta">aberta</option><option value="ganho">ganho</option><option value="perdido">perdido</option></select><button class="ghost" data-del>✕</button></div>`); };
+$("addOrigem").onclick=()=>$("cfgOrigens").insertAdjacentHTML("beforeend",`<div class="cfg-item" data-id=""><input type="text" placeholder="Nova origem"><button class="ghost" data-del>✕</button></div>`);
+$("addMotivo").onclick=()=>$("cfgMotivos").insertAdjacentHTML("beforeend",`<div class="cfg-item" data-id=""><input type="text" placeholder="Novo motivo"><button class="ghost" data-del>✕</button></div>`);
+$("saveEtapas").onclick=async ()=>{
+  for(const it of $("cfgEtapas").querySelectorAll(".cfg-item")){
+    const [ordem,nome,cor]=it.querySelectorAll("input"); const tipo=it.querySelector("select").value; const id=it.dataset.id;
+    if(it.dataset.del==="1"){ if(id){ if(leadsArr().some(l=>l.etapa_id===Number(id))) { toast(`"${nome.value}" tem leads, mova-os antes`); continue; } await sb.from("etapas").update({ativo:false}).eq("id",id); } continue; }
+    if(!nome.value.trim()) continue;
+    const rec={ordem:Number(ordem.value)||0,nome:nome.value.trim(),cor:cor.value,tipo};
+    if(id) await sb.from("etapas").update(rec).eq("id",id); else await sb.from("etapas").insert(rec);
+  }
+  await carregarCadastros(); renderAjustes(); toast("Etapas salvas");
+};
+$("saveCad").onclick=async ()=>{ const v={}; $("cfgCad").querySelectorAll("input").forEach(i=>v[i.dataset.n]=Number(i.value)||0); await sb.from("config").upsert({chave:"cadencia_dias",valor:v}); S.config.cadencia_dias=v; toast("Cadência salva"); };
+async function salvarLista(elId, tabela, msg){
+  for(const it of $(elId).querySelectorAll(".cfg-item")){
+    const nome=it.querySelector("input").value.trim(); const id=it.dataset.id;
+    if(it.dataset.del==="1"){ if(id) await sb.from(tabela).update({ativo:false}).eq("id",id); continue; }
+    if(!nome) continue;
+    if(id) await sb.from(tabela).update({nome}).eq("id",id); else await sb.from(tabela).insert({nome});
+  }
+  await carregarCadastros(); renderAjustes(); toast(msg);
+}
+$("saveOrigens").onclick=()=>salvarLista("cfgOrigens","origens","Origens salvas");
+$("saveMotivos").onclick=()=>salvarLista("cfgMotivos","motivos_perda","Motivos salvos");
+</script>
+</body>
+</html>
