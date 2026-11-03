@@ -390,7 +390,7 @@ function toast(m){ const t=$("toast"); t.textContent=m; t.classList.remove("hidd
 function etapa(id){ return S.etapas.find(e=>e.id===id); }
 function origemNome(id){ return S.origens.find(o=>o.id===id)?.nome || ""; }
 function aberto(l){ const e=etapa(l.etapa_id); return !e || e.tipo==="aberta"; }
-function diasDesde(d){ return Math.floor((Date.now()-new Date(d).getTime())/864e5); }
+function diasDesde(d){ return Math.max(0,Math.floor((Date.now()-new Date(d).getTime())/864e5)); }
 function fuStatus(l){ if(!l.proximo_followup||!aberto(l)) return null; const p=new Date(l.proximo_followup); const hoje=new Date(); hoje.setHours(0,0,0,0); const fim=new Date(hoje); fim.setDate(fim.getDate()+1); if(p<hoje) return "late"; if(p<fim) return "today"; return "future"; }
 function leadsArr(){ return Array.from(S.leads.values()); }
 
@@ -624,6 +624,7 @@ async function abrirLead(id){
     $("aLido")&&($("aLido").onclick=async()=>{ await sb.from("leads").update({nao_lidas:0}).eq("id",l.id); toast("Marcado como lido"); });
   }
   $("drawerWrap").classList.remove("hidden");
+  document.querySelector(".drawer-body").scrollTop = 0;   // sempre abre no topo, nas ações rápidas
   $("dTimeline").innerHTML = l.id ? `<div class="empty">carregando…</div>` : `<div class="empty">O histórico aparece depois de salvar.</div>`;
   if(l.id) carregarTimeline();
 }
