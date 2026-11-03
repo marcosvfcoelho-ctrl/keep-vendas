@@ -316,6 +316,16 @@ details.adv summary{cursor:pointer;color:var(--muted);font-size:13px;margin:8px 
           <div id="waStatus" class="muted small">Carregando…</div>
         </div>
         <div class="section">
+          <h3>ClickUp</h3>
+          <p class="muted small" style="margin-top:0">Ao marcar uma venda, o cliente é criado sozinho na lista "Inserir Novo Cliente", no lugar do formulário manual.</p>
+          <div class="row">
+            <div class="field"><label>Gestor responsável</label><select id="cupGestor"></select></div>
+            <div class="field"><label>Automático ao fechar venda</label><select id="cupAtivo"><option value="1">Sim</option><option value="0">Não, só pelo botão</option></select></div>
+          </div>
+          <div class="row"><button class="primary" id="saveCup">Salvar ClickUp</button></div>
+          <div id="cupStatus" class="muted small" style="margin-top:10px"></div>
+        </div>
+        <div class="section">
           <h3>Conta</h3>
           <p class="small muted" id="accEmail"></p>
           <div class="field"><label>Nova senha</label><input type="password" id="newPass" autocomplete="new-password" placeholder="mínimo 8 caracteres"></div>
@@ -336,6 +346,7 @@ details.adv summary{cursor:pointer;color:var(--muted);font-size:13px;margin:8px 
     </div>
     <div class="drawer-body">
       <div class="actions" id="dActions"></div>
+      <div id="dCupErro" class="msg-err hidden"></div>
       <div class="row">
         <div class="field"><label>Etapa</label><select id="dEtapa"></select></div>
         <div class="field"><label>Próximo follow-up</label><input type="datetime-local" id="dProx"></div>
@@ -628,14 +639,19 @@ async function abrirLead(id){
     ${ab?`<button id="aFu">Registrar follow-up ${l.followups_feitos+1}</button>`:""}
     ${ab?`<button id="aVenda" class="primary">Venda concluída</button>`:""}
     ${ab?`<button id="aPerda" class="danger">Desistiu</button>`:`<button id="aReabrir">Reabrir lead</button>`}
-    ${l.nao_lidas>0?`<button id="aLido" class="ghost">Marcar como lido</button>`:""}` : "";
+    ${l.nao_lidas>0?`<button id="aLido" class="ghost">Marcar como lido</button>`:""}
+    ${l.clickup_url?`<a class="chip ok" style="padding:8px 12px;border-radius:10px;text-decoration:none" href="${esc(l.clickup_url)}" target="_blank" rel="noopener">Ver no ClickUp</a>`
+      :(etapa(l.etapa_id)?.tipo==="ganho"?`<button id="aCup">Enviar para o ClickUp</button>`:"")}` : "";
   if(l.id){
     $("aFu")&&($("aFu").onclick=()=>registrarFollowup(l));
     $("aVenda")&&($("aVenda").onclick=()=>marcarVenda(l));
     $("aPerda")&&($("aPerda").onclick=()=>marcarPerda(l));
     $("aReabrir")&&($("aReabrir").onclick=()=>reabrir(l));
     $("aLido")&&($("aLido").onclick=async()=>{ await sb.from("leads").update({nao_lidas:0}).eq("id",l.id); toast("Marcado como lido"); });
+    $("aCup")&&($("aCup").onclick=()=>enviarClickUp(l));
   }
+  $("dCupErro").textContent = l.clickup_erro || "";
+  $("dCupErro").classList.toggle("hidden", !l.clickup_erro);
   $("drawerWrap").classList.remove("hidden");
   document.querySelector(".drawer-body").scrollTop = 0;   // sempre abre no topo, nas ações rápidas
   $("dTimeline").innerHTML = l.id ? `<div class="empty">carregando…</div>` : `<div class="empty">O histórico aparece depois de salvar.</div>`;
@@ -650,7 +666,7 @@ async function carregarTimeline(){
   const itens=[...(i.data||[]).filter(x=>x.tipo!=="msg_in"&&x.tipo!=="msg_out").map(x=>({t:x.tipo,tx:x.texto,at:x.criado_em,por:x.por})),
                ...(m.data||[]).map(x=>({t:x.direcao==="in"?"msg_in":"msg_out",tx:x.texto,at:x.enviado_em,status:x.status}))]
     .sort((a,b)=>new Date(b.at)-new Date(a.at));
-  const ic={nota:"✎",followup:"↻",etapa:"→",msg_in:"↙",msg_out:"↗",criado:"+",venda:"✓",perda:"✕"};
+  const ic={nota:"✎",followup:"↻",etapa:"→",msg_in:"↙",msg_out:"↗",criado:"+",venda:"✓",perda:"✕",clickup:"⇪"};
   $("dTimeline").innerHTML = itens.length ? itens.map(x=>`<div class="tl ${x.t}"><div class="ic">${ic[x.t]||"•"}</div><div>${x.t.startsWith("msg")?`<span class="bubble tx">${esc(x.tx)}</span>`:`<div class="tx">${esc(x.tx||"")}</div>`}<div class="tm">${fmtDT(x.at)}${x.por?" · "+esc(x.por):""}${x.status&&x.t==="msg_out"?" · "+esc(x.status):""}</div></div></div>`).join("") : `<div class="empty">Sem histórico ainda</div>`;
 }
 function lerForm(){
@@ -670,8 +686,11 @@ $("dSalvar").onclick = async ()=>{
     const antes=S.leads.get(l.id);
     const { error } = await sb.from("leads").update(f).eq("id",l.id);
     if(error) return toast("Erro ao salvar: "+error.message);
-    if(antes&&antes.etapa_id!==f.etapa_id) await registrarInteracao(l.id,"etapa",`Etapa: ${etapa(antes.etapa_id)?.nome||"?"} → ${etapa(f.etapa_id)?.nome||"?"}`);
+    const mudouEtapa = antes && antes.etapa_id!==f.etapa_id;
+    if(mudouEtapa) await registrarInteracao(l.id,"etapa",`Etapa: ${etapa(antes.etapa_id)?.nome||"?"} → ${etapa(f.etapa_id)?.nome||"?"}`);
+    Object.assign(l,f); S.leads.set(l.id,l);
     toast("Salvo");
+    if(mudouEtapa && etapa(f.etapa_id)?.tipo==="ganho") aoGanhar(l);
   } else {
     if(f.telefone){ const dup=leadsArr().find(x=>x.telefone===f.telefone); if(dup&&!confirm("Já existe um lead com esse telefone ("+(dup.nome||"sem nome")+"). Criar mesmo assim?")) return; }
     f.wa_id=f.telefone||null; f.responsavel=f.responsavel||S.user.email;
@@ -686,6 +705,32 @@ $("dSalvar").onclick = async ()=>{
 $("dExcluir").onclick = async ()=>{ const l=S.openLead; if(!l?.id||!confirm("Excluir este lead e todo o histórico?")) return; await sb.from("leads").delete().eq("id",l.id); S.leads.delete(l.id); fecharLead(); render(); toast("Lead excluído"); };
 $("dAddNota").onclick = async ()=>{ const l=S.openLead; const t=$("dNota").value.trim(); if(!l?.id||!t) return; await registrarInteracao(l.id,"nota",t); $("dNota").value=""; carregarTimeline(); toast("Anotação adicionada"); };
 async function registrarInteracao(leadId,tipo,texto,meta){ await sb.from("interacoes").insert({lead_id:leadId,tipo,texto,meta:meta||null,por:S.user?.email||null}); }
+
+// ---- ClickUp: cria o cliente na lista "Inserir Novo Cliente" ao fechar a venda ----
+async function enviarClickUp(l){
+  if(!l?.id || l.clickup_task_id) return;
+  toast("Criando cliente no ClickUp…");
+  try{
+    const { data, error } = await sb.functions.invoke("clickup-cliente",{ body:{ lead_id:l.id } });
+    if(error){
+      let detalhe="";
+      try{ detalhe=(await error.context?.json())?.erro || ""; }catch{}
+      throw new Error(detalhe || error.message);
+    }
+    if(data?.erro) throw new Error(data.erro);
+    Object.assign(l,{clickup_task_id:data.task_id, clickup_url:data.url, clickup_erro:null});
+    S.leads.set(l.id,l);
+    toast(data.repetido?"Esse cliente já estava no ClickUp":"Cliente criado no ClickUp");
+    if(S.openLead?.id===l.id){ abrirLead(l.id); }
+  }catch(e){
+    l.clickup_erro=String(e.message||e);
+    toast("Não consegui criar no ClickUp. Veja o aviso no lead.");
+    if(S.openLead?.id===l.id){ $("dCupErro").textContent=l.clickup_erro; $("dCupErro").classList.remove("hidden"); }
+  }
+}
+// chamada sempre que um lead entra numa etapa de ganho, por qualquer caminho
+function aoGanhar(l){ const cfg=S.config.clickup; if(cfg?.ativo!==false) enviarClickUp(l); }
+
 async function mudarEtapa(id, etapaId){
   const l=S.leads.get(id); if(!l||l.etapa_id===etapaId) return;
   const e=etapa(etapaId); const patch={etapa_id:etapaId};
@@ -694,6 +739,7 @@ async function mudarEtapa(id, etapaId){
   if(error) return toast("Erro: "+error.message);
   await registrarInteracao(id,"etapa",`Etapa: ${etapa(l.etapa_id)?.nome||"?"} → ${e?.nome||"?"}`);
   Object.assign(l,patch); render();
+  if(e?.tipo==="ganho") aoGanhar(l);
 }
 
 // ---- ações rápidas ----
@@ -730,6 +776,7 @@ async function marcarVenda(l){
     const { error } = await sb.from("leads").update(patch).eq("id",l.id); if(error) return toast("Erro: "+error.message);
     await registrarInteracao(l.id,"venda",`Venda concluída${v?" · "+fmtR(v):""}${$("mTexto").value.trim()?" · "+$("mTexto").value.trim():""}`);
     Object.assign(l,patch); fecharModal(); fecharLead(); render(); toast("Venda registrada");
+    aoGanhar(l);
   };
 }
 async function marcarPerda(l){
@@ -760,7 +807,7 @@ $("modal").addEventListener("click",(e)=>{ if(e.target.id==="modal") fecharModal
 // ============ AJUSTES ============
 function renderAjustes(){
   $("cfgEtapas").innerHTML = S.etapas.map(e=>`<div class="cfg-item" data-id="${e.id}">
-    <input type="number" value="${e.ordem}" title="ordem"><input type="text" value="${esc(e.nome)}"><input type="color" value="${e.cor||"#139A5B"}">
+    <input type="number" value="${e.ordem}" title="ordem"><input type="text" value="${esc(e.nome)}"><input type="color" value="${e.cor||"#00CA9E"}">
     <select><option value="aberta" ${e.tipo==="aberta"?"selected":""}>aberta</option><option value="ganho" ${e.tipo==="ganho"?"selected":""}>ganho</option><option value="perdido" ${e.tipo==="perdido"?"selected":""}>perdido</option></select>
     <button class="ghost" data-del title="Desativar">✕</button></div>`).join("");
   const cad=S.config.cadencia_dias||{};
@@ -768,8 +815,25 @@ function renderAjustes(){
     + `<div class="cfg-item"><span style="width:120px">Padrão</span><input type="number" min="0" data-n="padrao" value="${cad.padrao??7}"><span class="muted small">dias</span></div>`;
   $("cfgOrigens").innerHTML = S.origens.map(o=>`<div class="cfg-item" data-id="${o.id}"><input type="text" value="${esc(o.nome)}"><button class="ghost" data-del>✕</button></div>`).join("");
   $("cfgMotivos").innerHTML = S.motivos.map(m=>`<div class="cfg-item" data-id="${m.id}"><input type="text" value="${esc(m.nome)}"><button class="ghost" data-del>✕</button></div>`).join("");
-  renderWaStatus();
+  renderWaStatus(); renderCup();
 }
+function renderCup(){
+  const c=S.config.clickup||{};
+  const gestores=c.gestores||{};
+  $("cupGestor").innerHTML = Object.keys(gestores).map(n=>`<option value="${esc(n)}" ${n===c.gestor_nome?"selected":""}>${esc(n)}</option>`).join("") || `<option>—</option>`;
+  $("cupAtivo").value = c.ativo===false ? "0" : "1";
+  const enviados = leadsArr().filter(l=>l.clickup_task_id).length;
+  const falhas = leadsArr().filter(l=>l.clickup_erro).length;
+  $("cupStatus").innerHTML = `Lista de destino: <b>Inserir Novo Cliente</b> · ${enviados} cliente(s) já enviado(s)` + (falhas?` · <span style="color:var(--danger)">${falhas} com erro</span>`:"");
+}
+$("saveCup").onclick=async ()=>{
+  const c={...(S.config.clickup||{})};
+  const nome=$("cupGestor").value;
+  c.gestor_nome=nome; c.gestor_id=(c.gestores||{})[nome]||c.gestor_id; c.ativo=$("cupAtivo").value==="1";
+  const { error } = await sb.from("config").upsert({chave:"clickup",valor:c});
+  if(error) return toast("Erro ao salvar: "+error.message);
+  S.config.clickup=c; renderCup(); toast("ClickUp salvo");
+};
 async function renderWaStatus(){
   const { data } = await sb.from("webhook_log").select("recebido_em,campo,erro").order("recebido_em",{ascending:false}).limit(1);
   const ultimo=data?.[0];
@@ -778,7 +842,7 @@ async function renderWaStatus(){
     : `Número ainda não conectado. Quando o webhook da Meta for ligado (Fase 2), as mensagens recebidas aparecem aqui e os leads entram sozinhos no funil.`;
 }
 ["cfgEtapas","cfgOrigens","cfgMotivos"].forEach(id=>$(id).addEventListener("click",(e)=>{ const b=e.target.closest("[data-del]"); if(!b) return; const it=b.closest(".cfg-item"); it.dataset.del="1"; it.style.opacity=.4; }));
-$("addEtapa").onclick=()=>{ $("cfgEtapas").insertAdjacentHTML("beforeend",`<div class="cfg-item" data-id=""><input type="number" value="${(S.etapas.at(-1)?.ordem||0)+10}"><input type="text" placeholder="Nome da etapa"><input type="color" value="#139A5B"><select><option value="aberta">aberta</option><option value="ganho">ganho</option><option value="perdido">perdido</option></select><button class="ghost" data-del>✕</button></div>`); };
+$("addEtapa").onclick=()=>{ $("cfgEtapas").insertAdjacentHTML("beforeend",`<div class="cfg-item" data-id=""><input type="number" value="${(S.etapas.at(-1)?.ordem||0)+10}"><input type="text" placeholder="Nome da etapa"><input type="color" value="#00CA9E"><select><option value="aberta">aberta</option><option value="ganho">ganho</option><option value="perdido">perdido</option></select><button class="ghost" data-del>✕</button></div>`); };
 $("addOrigem").onclick=()=>$("cfgOrigens").insertAdjacentHTML("beforeend",`<div class="cfg-item" data-id=""><input type="text" placeholder="Nova origem"><button class="ghost" data-del>✕</button></div>`);
 $("addMotivo").onclick=()=>$("cfgMotivos").insertAdjacentHTML("beforeend",`<div class="cfg-item" data-id=""><input type="text" placeholder="Novo motivo"><button class="ghost" data-del>✕</button></div>`);
 $("saveEtapas").onclick=async ()=>{
